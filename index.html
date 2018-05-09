@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src = "https://d3js.org/d3.v3.min.js"></script>
+    <script src = "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="d3-slider/d3.slider.js"></script>
+    <link rel="stylesheet" href="d3-slider/d3.slider.css" />  
+    <title>TMOOPE</title>
+</head>
+<style>
+		#tooltip {
+	        position: absolute;
+	        height: auto;
+	        padding: 5px;
+	        background-color: white;
+	        -webkit-border-radius: 10px;
+	        -moz-border-radius: 10px;
+	        border-radius: 10px;
+	        -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+	        -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+	        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+	        pointer-events: none;
+	    }
+
+		#tooltip.hidden {
+	        display: none;
+	    }
+        #slider {
+            height: 20px;
+            width: 20px;
+            background: #2394F5;
+            margin: 15px;
+        }
+
+        .slider {
+        	width: 60%;
+        	background: #F0F0F0;
+            margin: 15px;
+        }
+
+        #alert_bar {
+        	width: 500px;
+        	height: 800px;
+        }
+
+        .d3-slider-axis text { font: 18px sans-serif ; }
+</style>
+
+<body>
+	<div id='alert_bar'></div>
+	
+	<script>
+		const feature_map = {0:['Humidity', 'humidity'], 1:['Tempeature', 'tempeature(K)'], 2:['User count', 'user_count1'], 3:['Speed', 'user_avg_speed1'], 4:['Wind', 'wind speed']}
+		var selected_feature = 3;
+	</script>
+	<script>
+		var width = 1100;
+	    var height = 1100;
+
+		var svg_alert = d3.select('body').append('svg')
+							.attr("width", 50)
+							.attr("height",height);
+		var color_0 = d3.rgb('#74C476');
+		var color_1 = d3.rgb('#A1D99B');
+		var color_2 = d3.rgb('#FDD0A2');
+		var color_3 = d3.rgb('#FD8D3C');
+		var color_4 = d3.rgb('#E6550D');
+
+		var colors = [color_0, color_1, color_2, color_3, color_4];
+
+		var alert_linear = d3.scale.linear().domain([0,4]).range([0,4]);
+
+		var clk = 0;
+		var unit_wid = 50;
+		var unit_height = height/5;
+		var rects1 = svg_alert
+				.append("rect")
+				.attr("x", 0)
+				.attr("y", height/5*4)
+				.attr("width",unit_wid)
+				.attr("height",unit_height)
+				.style("fill",colors[0])
+				.on('click', function(d){
+					clk = (clk+1)%5;
+					// console.log(colors[clk]);
+					d3.select(this)
+						.transition()
+						.duration(1000)
+						.attr("height", (clk+1)*unit_height)
+						.attr('y', (height/5*(4-clk)))
+						.style("fill", colors[clk])
+				})
+
+	</script>
+
+	<script>
+		var features = {};
+		function load_csv(day, hour) {
+			// body...
+			var filename = 'files/'+day+'_'+hour+'.csv';
+			d3.csv(filename, function(error, data) {
+				console.log("Reading:", day+'_'+hour);
+				if (error)
+					return;
+				if (!features.hasOwnProperty([day])) {
+					features[day] = {};
+				}
+				features[day][hour] = {} ;
+				for (i=0; i<data.length; i++) {
+					var d = data[i];
+					// console.log(d['humidity']);
+					if (d['user_avg_speed1']>140) {
+						d['user_avg_speed1'] = 140;
+					}
+					features[day][hour][data[i]['ct']] = d;
+
+					humid_max = Math.max(humid_max, d['humidity']);
+					humid_min = Math.min(humid_min, d['humidity']);
+					wind_speed_max = Math.max(wind_speed_max, d['wind speed']);
+					wind_speed_min = Math.min(wind_speed_min, d['wind speed']);
+					temperature_max = Math.max(temperature_max, d['tempeature(K)']);
+					temperature_min = Math.min(temperature_min, d['tempeature(K)']);
+					user_count_max = Math.max(user_count_max, d['user_count1']);
+					user_avg_speed_max = Math.max(user_avg_speed_max, d['user_avg_speed1']);
+
+					humid_list.push(d['humidity']);
+					temperature_list.push(d['tempeature(K)']);
+					wind_list.push(d['wind speed']);
+					user_count_list.push(d['user_count1']);
+					speed_list.push(d['user_avg_speed1']);
+				}
+			});
+		}
+	</script>
+
+	<script>
+		// Load files
+		var humid_min = 100, humid_max = 0, humid_list=[];
+		var temperature_min = 100, temperature_max = 0, temperature_list=[];
+		var user_avg_speed_max = 0, speed_list=[];
+		var user_count_max = 0, user_count_list=[];
+		var wind_speed_min = 100, wind_speed_max = 0, wind_list=[];
+
+		var t_start = moment("2016-01-04 00");
+		var t_end = moment("2016-01-13 00");
+		// var t_end = moment("2016-10-14 14");
+
+		var t = moment("2016-01-04 00");
+		for (;t.isBefore(t_end); t=t.add(1, 'hours')) {
+			t_str = t.format("YYYYMMDD_HH");
+			var day = t_str.split('_')[0];
+			var hour = t_str.split('_')[1];
+			load_csv(day, hour);
+			if (t.isSame(moment("2016-03-09 14"))){
+				t = moment("2016-07-08 09");
+			}
+		}
+
+		day = t_start.format("YYYYMMDD");
+		hour = t_start.format("HH");
+
+		function get_compute(color) {
+			// return compute = d3.interpolate(colors[0], colors[1]);
+			return compute = d3.interpolate(d3.rgb('#d0d0d0'), color[1]);
+		}
+		function get_linear(min, max) {
+			console.log(min, max);
+			return d3.scale.linear().domain([min, max]).range([0,1]);
+		}
+
+		var humid_color = [d3.rgb('#c6dbef'), d3.rgb('#3182bd')];
+		var temperature_color = [d3.rgb('#E6550D'), d3.rgb('#fdae6b')];
+		var wind_color = [d3.rgb('#dadaeb'), d3.rgb('#756bb1')];
+		var user_count_color = [d3.rgb('#cedb9c'), d3.rgb('#637939')];
+		var speed_color = [d3.rgb('#e7969c'), d3.rgb('#ad49ca')];
+
+		var humid_compute = get_compute(humid_color);
+		var humid_linear = get_linear(21, 100);
+
+		var speed_compute = get_compute(speed_color);
+		var speed_linear = get_linear(0, 140);
+
+		var temperature_compute = get_compute(temperature_color);
+		var temperature_linear = get_linear(-10, 100);
+
+		var user_count_compute = get_compute(user_count_color);
+		var user_count_linear = get_linear(0, 50);
+
+		var wind_compute = get_compute(wind_color);
+		var wind_linear = get_linear(0, 40);
+
+		var computes = [humid_compute, temperature_compute, user_count_compute, speed_compute, wind_compute];
+		var linears = [humid_linear, temperature_linear, user_count_linear, speed_linear, wind_linear];
+
+
+	</script>
+
+	<script>
+		var svg_note = d3.select('#alert_bar')
+						.append('svg')
+						.attr('id', 'note')
+    					.attr("width", 300)
+    					.attr('height', 200)
+    	svg_note.append("g")
+	        .attr("class", "legend");
+	    svg_note.append("g")
+	        .attr("class", "legend_title")
+	        .append("text");
+	    render_legend(colors)
+
+	    function render_legend(colors, data) {
+	    	let svg_height = +d3.select("svg#note").attr("height");
+	    	console.log(svg_height)
+	    	let legend = d3.select("svg#note g.legend").selectAll("rect")
+               .data([0,1,2,3,4]);
+            legend.exit().remove();
+
+		  legend.enter()
+		          .append("rect")
+		        // .merge(legend)
+		          .attr("width", "20")
+		          .attr("height", "20")
+		          .attr("y", function(d, i) { return (svg_height-29) - 25*i; })
+		          .attr("x", 30)
+		          .attr("fill", function(d, i) { return colors[i]; })
+
+		  let text = d3.select("svg#note g.legend").selectAll("text");
+
+		  var node_text = [
+		  	"0 - 100", "100 - 200", "200 - 350", "350 - 500", " > 500"
+		  ]
+		  text.data(node_text)
+		    .enter().append("text")
+		      .attr("y", function(d, i) { return (svg_height-14) - 25*i; })
+		      .attr("x", 60)
+		      .text(function(d, i) { return d; });
+
+		  d3.select("svg#note g.legend_title text")
+		        .text("Alert (quantity ranges)")
+		        .attr("x", 30)
+		        .attr("y", (svg_height-29) - 25 * 5)
+		        .attr("font-size", 22)
+
+			    }
+	</script>
+	<script>
+		// Init map
+		
+	    basicColor = d3.rgb('#C4E1E1');
+
+		function set_color(d) {
+			feats = features[day][hour][d.properties.VALUE1]
+			return computes[selected_feature](linears[selected_feature](feats[feature_map[selected_feature][1]]));
+		}
+		var projection2 = d3.geo.mercator()
+            .center([-87.7, 41.7])
+            .scale([100000])
+            .translate([500, 800]);
+	    var path = d3.geo.path()
+            .projection(projection2);
+	    var svg2 = d3.select("body").append("svg")
+	            .attr("width",width)
+	            .attr("height",height)
+	            .style("backgound-color","red")
+	            .attr("transform","translate(30,0)");
+
+	    var path_json;
+	    d3.json("nw.json", function(error, root){
+			if (error)
+		        return console.error(error);
+		    path_json = root;
+		    var i=0;
+
+	        svg2.selectAll("path")
+	            .data( root.features )
+	            .enter()
+	            .append("path")
+	            .attr("stroke",d3.rgb('#FFFFFF'))
+	            .attr("stroke-width",1)
+	            .attr("d", path )
+	            .on('mouseover', function(d, i){
+	            	feats = features[day][hour][d.properties.VALUE1];
+	            	d3.select(this)
+		            	.attr('fill', 'red');
+		            $('#ct').text(d.properties.VALUE1);
+		            $('#humid').text(feats[feature_map[0][1]])
+		            $('#temperature').text(feats[feature_map[1][1]])
+		            $('#user_count').text(feats[feature_map[2][1]])
+		            $('#speed').text(feats[feature_map[3][1]])
+		            $('#wind').text(feats[feature_map[4][1]])
+	            	d3.select("#tooltip")
+                        .style("z-index",999)
+                        .style("left", (d3.event.pageX) + "px")
+                        .style("top", (d3.event.pageY + 20) + "px")
+                        .classed("hidden",false);
+
+	            })
+	            .on("mouseout",function(d,i){
+	            	console.log("mouseout");
+                    d3.select("#tooltip").classed("hidden",true);
+                    d3.select(this)
+	                    .attr("fill", function(d, i){
+			            	return set_color(d);
+			            })
+                })
+	            .attr("fill", function(d, i){
+	            	return set_color(d);
+	            })
+	            
+	    });
+
+	    var svg_radio = d3.select('#alert_bar').append('svg')
+	    					.attr("width", 400)
+	    					.attr('height', 600)
+        var hoverColor= "#2394F5"
+	    var pressedColor= "#000077"
+
+		svg_radio.append("rect")
+            .attr("id","backgroundRect")
+            .attr("width","100%")
+            .attr("height","100%")
+            .attr("x",0)
+            .attr("y",0)
+            .attr("fill","#FFFFFF")
+        var allButtons= svg_radio.append("g")
+                                .attr("id","allButtons")
+        var buttonGroups= allButtons.selectAll("g.button")
+                                    .data(['Humidity','Tempeature','User count','Speed','Wind'])
+                                    .enter()
+                                    .append("g")
+                                    .attr("class","button")
+                                    .style("cursor","pointer")
+                                    .on("click",function(d,i) {
+                                        selected_feature = i;
+                                        updateButtonWidth(d3.select(this), d3.select(this.parentNode))
+                                        update_map();
+                                    })
+                                    .on("mouseover", function() {
+                                        if (d3.select(this).select("rect").attr("fill") != pressedColor) {
+                                            d3.select(this)
+                                                .select("rect")
+                                                .attr("fill",hoverColor);
+                                        }
+                                    })
+                                    .on("mouseout", function() {
+                                        if (d3.select(this).select("rect").attr("fill") != pressedColor) {
+                                            d3.select(this.parentNode).selectAll("rect")
+                                                .attr("fill",function(d, i){
+                                                	if (d3.select(this).attr("fill") == pressedColor) {
+                                                		return pressedColor;
+                                                	}
+						                        	return f_colors[i];
+						                        });
+                                        }
+                                    })
+        	var bWidth= 250; //button width
+            var bHeight= 50; //button height
+            var bSpace= 50; //space between buttons
+            var x0= 50; //x offset
+            var y0= 50; //y offset
+
+            // var f_colors = [humid_color[0], temperature_color[0], user_count_color[0], speed_color[0], wind_color[0]];
+            var f_colors = [
+            	humid_compute(humid_linear(50)),
+            	temperature_compute(temperature_linear(50)),
+            	user_count_compute(user_count_linear(25)),
+            	speed_compute(speed_linear(70)),
+            	wind_compute(wind_linear(20)),
+            ];
+            buttonGroups.append("rect")
+                        .attr("class","buttonRect")
+                        .attr("width",bWidth)
+                        .attr("height",bHeight)
+                        .attr("x", x0)
+                        .attr("y", function(d,i) {return y0+(bHeight+bSpace)*i;})
+                        .attr("rx",15) //rx and ry give the buttons rounded corners
+                        .attr("ry",15)
+                        .attr("fill",function(d, i){
+                        	return f_colors[i];
+                        })
+
+		buttonGroups.append("text")
+						.attr('font-size', 25)
+                        .attr('x', x0+bWidth/2)
+                        .attr('y', function(d, i){
+                        	return y0 + (bHeight+bSpace)*i + bHeight/2;
+                        })
+                        .attr("text-anchor","middle")
+                        .attr("dominant-baseline","central")
+                        .attr("fill","white")
+                        .text(function(d) {return d;})
+
+        function updateButtonWidth(button, parent) {
+                parent.selectAll("rect")
+		                .attr('x', function(d, i){
+		                	return i==selected_feature ? (x0-30) : (x0);
+		                })
+		                .attr('width', function(d,i){
+		                	return i==selected_feature ? bWidth+60 : bWidth;
+		                })
+		                .attr('y', function(d, i){
+		                	return i==selected_feature ? y0 + (bHeight+bSpace)*i - 10 : y0 + (bHeight+bSpace)*i 
+		                })
+		                .attr('height', function(d, i){
+		                	return i==selected_feature ? bHeight + 20 : bHeight;
+		                })
+		                ;
+            }
+	</script>
+
+	<script>
+		function update_map() {
+			console.log("update day:", day, "hour:", hour);
+	  		svg2.selectAll('path')
+	  			.transition().duration(800)
+	  			.attr('fill', function(d, i){
+	  				return set_color(d);
+	  			})
+		}
+	</script>>
+
+	<h2>Date: <span id="silderDayText"><script>moment('20160104').format('MMMM Do YYYY')</script></span>
+    <div id="sliderDay" class="slider"></div>
+    <br>
+    <h2>Hour: <span id="silderHourText"><script type="text/javascript">moment().hours(2).format('h a')</script></span>
+    <div id="sliderHour" class="slider"></div>
+	
+	<script>
+		d3.select('#sliderDay').call(d3.slider().scale(d3.time.scale().domain([new Date(2016,0,5), new Date(2016,9,10)])).axis(d3.svg.axis()).on("slide", function(evt, value) {
+	      	d3.select('#silderDayText').text(moment(new Date(value)).format('MMM Do YYYY'));
+	      	day = moment(new Date(value)).format('YYYYMMDD');
+	      	update_map();
+	    }));
+
+	    d3.select('#sliderHour').call(d3.slider().scale(d3.time.scale().domain([moment().hours(0).minutes(0).seconds(0), moment().hours(23).minutes(0).seconds(0)])).axis(d3.svg.axis()).on("slide", function(evt, value) {
+	      	d3.select('#silderHourText').text(moment(new Date(value)).format('h a'));
+	      	hour = moment(new Date(value)).format('HH');
+	      	update_map();
+	    }));
+	</script>
+	<div id="tooltip" class="hidden">
+		<table class="table table-striped" id="apis_table">
+
+	        <tbody>
+	        		<tr>
+	                    <th>CT</th>
+	                    <td id='ct'>ct</td>
+	                </tr>
+	                <tr>
+	                    <th>Humidty</th>
+	                    <td id='humid'>humid=81</td>
+	                </tr>
+	                <tr>
+	                	<th>Temperature</th>
+	                	<td id='temperature'>temp=123</td>
+	                </tr>
+	                <tr>
+	                	<th>User count</th>
+	                	<td id='user_count'>users=12</td>
+	                </tr>
+	                <tr>
+	                	<th>Speed</th>
+	                	<td id='speed'></td>
+	                </tr>
+	                <tr>
+	                	<th>Wind</th>
+	                	<td id='wind'></td>
+	                </tr>
+	        </tbody>
+	    </table>
+	</div>
+</body>
