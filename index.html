@@ -8,7 +8,7 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     <script src="d3-slider/d3.slider.js"></script>
     <link rel="stylesheet" href="d3-slider/d3.slider.css" />  
-    <title>TMOOPE</title>
+    <title>688 Project</title>
 </head>
 <style>
 		#tooltip {
@@ -36,7 +36,7 @@
         }
 
         .slider {
-        	width: 60%;
+        	width: 100%;
         	background: #F0F0F0;
             margin: 15px;
         }
@@ -50,7 +50,26 @@
 </style>
 
 <body>
-	<div id='alert_bar'></div>
+	<div class="container">
+		<div class="row">
+			<div id="left" class="col-md-2">
+				<div id='alert_bar'></div>
+			</div>
+			<div id="map" class="col-md-9">
+				
+			</div>
+			<div id="alert_level_zeq" class="col-md-1"></div>
+		</div>
+		<div class="row" style="margin-top: -200px">
+			<div class="col-md-12">
+				<h2>Date: <span id="silderDayText"><script>moment('20160104').format('MMMM Do YYYY')</script></span>
+			    <div id="sliderDay" class="slider"></div>
+			    <br/>
+			    <h2>Hour: <span id="silderHourText"><script type="text/javascript">moment().hours(2).format('h a')</script></span>
+			    <div id="sliderHour" class="slider"></div>
+			</div>
+		</div>
+	</div>
 	
 	<script>
 		const feature_map = {0:['Humidity', 'humidity'], 1:['Tempeature', 'tempeature(K)'], 2:['User count', 'user_count1'], 3:['Speed', 'user_avg_speed1'], 4:['Wind', 'wind speed']}
@@ -58,11 +77,12 @@
 	</script>
 	<script>
 		var width = 1100;
-	    var height = 1100;
+		var height = 1100;
+	    var alert_bar_height = 930;
 
-		var svg_alert = d3.select('body').append('svg')
+		var svg_alert = d3.select('#alert_level_zeq').append('svg')
 							.attr("width", 50)
-							.attr("height",height);
+							.attr("height",alert_bar_height);
 		var color_0 = d3.rgb('#74C476');
 		var color_1 = d3.rgb('#A1D99B');
 		var color_2 = d3.rgb('#FDD0A2');
@@ -75,11 +95,11 @@
 
 		var clk = 0;
 		var unit_wid = 50;
-		var unit_height = height/5;
+		var unit_height = alert_bar_height/5;
 		var rects1 = svg_alert
 				.append("rect")
 				.attr("x", 0)
-				.attr("y", height/5*4)
+				.attr("y", alert_bar_height/5*4)
 				.attr("width",unit_wid)
 				.attr("height",unit_height)
 				.style("fill",colors[0])
@@ -90,10 +110,24 @@
 						.transition()
 						.duration(1000)
 						.attr("height", (clk+1)*unit_height)
-						.attr('y', (height/5*(4-clk)))
+						.attr('y', (alert_bar_height/5*(4-clk)))
 						.style("fill", colors[clk])
 				})
 
+	</script>
+
+	<script>
+		var results = {};
+		d3.csv("stupid_weng.csv", function(error, data) {
+			for (i=0; i<data.length;i++) {
+				var d = data[i];
+				if (!results.hasOwnProperty(d['date'])) {
+					results[d['date']] = {};
+				}
+				results[d['date']][d['hour']] = d['pred'];
+			}
+			console.log(results);
+		})
 	</script>
 
 	<script>
@@ -102,10 +136,9 @@
 			// body...
 			var filename = 'files/'+day+'_'+hour+'.csv';
 			d3.csv(filename, function(error, data) {
-				console.log("Reading:", day+'_'+hour);
 				if (error)
 					return;
-				if (!features.hasOwnProperty([day])) {
+				if (!features.hasOwnProperty(day)) {
 					features[day] = {};
 				}
 				features[day][hour] = {} ;
@@ -145,8 +178,8 @@
 		var wind_speed_min = 100, wind_speed_max = 0, wind_list=[];
 
 		var t_start = moment("2016-01-04 00");
-		var t_end = moment("2016-01-13 00");
-		// var t_end = moment("2016-10-14 14");
+		// var t_end = moment("2016-01-13 00");
+		var t_end = moment("2016-10-14 14");
 
 		var t = moment("2016-01-04 00");
 		for (;t.isBefore(t_end); t=t.add(1, 'hours')) {
@@ -194,7 +227,6 @@
 
 		var computes = [humid_compute, temperature_compute, user_count_compute, speed_compute, wind_compute];
 		var linears = [humid_linear, temperature_linear, user_count_linear, speed_linear, wind_linear];
-
 
 	</script>
 
@@ -246,6 +278,7 @@
 
 			    }
 	</script>
+
 	<script>
 		// Init map
 		
@@ -261,7 +294,7 @@
             .translate([500, 800]);
 	    var path = d3.geo.path()
             .projection(projection2);
-	    var svg2 = d3.select("body").append("svg")
+	    var svg2 = d3.select("#map").append("svg")
 	            .attr("width",width)
 	            .attr("height",height)
 	            .style("backgound-color","red")
@@ -328,7 +361,7 @@
         var allButtons= svg_radio.append("g")
                                 .attr("id","allButtons")
         var buttonGroups= allButtons.selectAll("g.button")
-                                    .data(['Humidity','Tempeature','User count','Speed','Wind'])
+                                    .data(['Humidity','Temperature','User amount','Speed','Wind'])
                                     .enter()
                                     .append("g")
                                     .attr("class","button")
@@ -412,6 +445,18 @@
 	</script>
 
 	<script>
+		function update_alert() {
+			alert_level = results[day][hour];
+			console.log("alert_level", alert_level)
+			svg_alert.select('rect')
+				.transition().duration(800)
+				.attr("height", (alert_level+1)*unit_height)
+				.attr('y', (alert_bar_height/5*(4-alert_level)))
+				.style('fill', function(d, i){
+					return colors[alert_level];
+				})
+		}
+
 		function update_map() {
 			console.log("update day:", day, "hour:", hour);
 	  		svg2.selectAll('path')
@@ -419,17 +464,12 @@
 	  			.attr('fill', function(d, i){
 	  				return set_color(d);
 	  			})
+	  		update_alert();
 		}
 	</script>>
-
-	<h2>Date: <span id="silderDayText"><script>moment('20160104').format('MMMM Do YYYY')</script></span>
-    <div id="sliderDay" class="slider"></div>
-    <br>
-    <h2>Hour: <span id="silderHourText"><script type="text/javascript">moment().hours(2).format('h a')</script></span>
-    <div id="sliderHour" class="slider"></div>
 	
 	<script>
-		d3.select('#sliderDay').call(d3.slider().scale(d3.time.scale().domain([new Date(2016,0,5), new Date(2016,9,10)])).axis(d3.svg.axis()).on("slide", function(evt, value) {
+		d3.select('#sliderDay').call(d3.slider().scale(d3.time.scale().domain([new Date(2016,0,5), new Date(2016,9,14)])).axis(d3.svg.axis()).on("slide", function(evt, value) {
 	      	d3.select('#silderDayText').text(moment(new Date(value)).format('MMM Do YYYY'));
 	      	day = moment(new Date(value)).format('YYYYMMDD');
 	      	update_map();
@@ -446,7 +486,7 @@
 
 	        <tbody>
 	        		<tr>
-	                    <th>CT</th>
+	                    <th>Census Track</th>
 	                    <td id='ct'>ct</td>
 	                </tr>
 	                <tr>
